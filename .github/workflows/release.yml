@@ -1,0 +1,104 @@
+name: 'Release'
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+env:
+  CARGO_INCREMENTAL: 0
+
+jobs:
+  build:
+    name: Binary
+    strategy:
+      fail-fast: false
+      matrix:
+        job:
+          - { target: x86_64-unknown-linux-musl, exe: amd64-linux, os: ubuntu-latest, features: default }
+          - { target: aarch64-unknown-linux-musl, exe: aarch64-linux,  os: ubuntu-latest, features: default }
+          - { target: armv7-unknown-linux-musleabi, exe: armv7-linux, os: ubuntu-latest, features: default }
+          - { target: wasm32-wasi, exe: wasi.wasm, os: ubuntu-latest, features: "" }
+          - { target: x86_64-apple-darwin, exe: macos, os: macos-latest, features: default }
+          - { target: x86_64-pc-windows-msvc, exe: windows.exe, os: windows-2019, features: default }
+    runs-on: ${{ matrix.job.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          profile: minimal
+          toolchain: 1.62.0
+          override: true
+          target: ${{ matrix.job.target }}
+          components: rust-src
+      - uses: actions-rs/cargo@v1
+        with:
+          use-cross: true
+          args: --release --target=${{ matrix.job.target }} --locked
+          command: build
+      - name: Rename result
+        run: |
+          rm target/${{ matrix.job.target }}/release/patch-json.d
+          cp target/${{ matrix.job.target }}/release/patch-json* patch-json-${{ matrix.job.exe }}
+      #- name: wasm-opt
+      #  run: |
+      #    wasm-opt -O4 -o opt.wasm patch-json-${{ matrix.job.exe }}
+      #    mv opt.wasm patch-json-${{ matrix.job.exe }}
+      #  if: ${{ contains(matrix.job.target, 'wasm') }}
+      #- name: upx
+      #  uses: svenstaro/upx-action@v2
+      #  with:
+      #    file: patch-json-${{ matrix.job.exe }}
+      #    args: --best --lzma
+      #  if: ${{ contains(matrix.job.target, 'linux') }}
+      - name: Archive production artifacts
+        uses: actions/upload-artifact@v2
+        with:
+          name: arty
+          path: patch-json-${{ matrix.job.exe }}
+
+  #cargo-publish:
+  #  runs-on: ubuntu-20.04
+  #  needs: build
+  #  steps:
+  #    - uses: actions/checkout@v3
+
+  #    - name: Cargo publish
+  #      run: |
+  #        git config --global user.email "runner@gha.local"
+  #        git config --global user.name "Github Action"
+  #        cargo publish --allow-dirty --token ${{ secrets.CRATES_IO_TOKEN }}
+
+  wapm-publish:
+    runs-on: ubuntu-20.04
+    needs: build
+    steps:
+      - name: Setup Wasmer
+        uses: wasmerio/setup-wasmer@v1
+      - uses: actions/checkout@v2
+      - uses: actions/download-artifact@v3
+        with:
+          name: arty
+      - run: mkdir -p target/wasm32-wasi/release/ && mv patch-json-wasi.wasm target/wasm32-wasi/release/patch-json.wasm
+      - name: WAPM publish
+        run: wapm publish
+        env:
+          WAPM_REGISTRY_TOKEN: ${{ secrets.WAPM_REGISTRY_TOKEN }}
+  
+  release:
+    name: "Tagged Release"
+    runs-on: "ubuntu-20.04"
+    needs: build
+    steps:
+      - uses: actions/download-artifact@v2
+      - uses: "marvinpinto/action-automatic-releases@latest"
+        with:
+          repo_token: "${{ secrets.GITHUB_TOKEN }}"
+          prerelease: false
+          files: |
+            ./arty/patch-json-wasi.wasm
+            ./arty/patch-json-windows.exe
+            ./arty/patch-json-macos
+            ./arty/patch-json-aarch64-linux
+            ./arty/patch-json-armv7-linux
+            ./arty/patch-json-amd64-linux
