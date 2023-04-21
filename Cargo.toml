@@ -1,16 +1,18 @@
 [package]
 name = "patch-json"
-version = "0.1.0"
+version = "0.1.1"
 authors = ["Julius Michaelis <gitter@liftm.de>"]
-edition = "2018"
+edition = "2021"
 description = "Tool for generating and applying RFC 6902 JSON patches"
 license = "Apache-2.0"
 readme = "README.md"
 categories = ["command-line-utilities"]
+keywords = ["json", "patch", "cli", "json-patch", "cli-tool"]
 repository = "https://github.com/jcaesar/patch-json"
+rust-version = "1.59"
 
 [dependencies]
-json-patch = "0.2"
+json-patch = "1.0"
 serde_json = { version = "1", features = ["preserve_order"] }
 
 [profile.release]

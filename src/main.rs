@@ -1,3 +1,4 @@
+use json_patch::Patch;
 use serde_json::{de::IoRead, Deserializer, Value};
 use std::{convert::TryInto, env::args_os, fs::File, io::stdin, process::exit};
 
@@ -98,7 +99,7 @@ fn main() {
             );
         }
         Op::Merge => {
-            let patch = match json_patch::from_value(a2) {
+            let patch = match serde_json::from_value::<Patch>(a2) {
                 Ok(patch) => patch,
                 Err(e) => {
                     eprintln!("Third argument is not a valid JSON patch: {}", e);
