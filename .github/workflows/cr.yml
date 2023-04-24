@@ -103,7 +103,13 @@
             },
             {
               target: "x86_64-apple-darwin",
-              exe: macos,
+              exe: "amd64-macos",
+              os: "macos-latest",
+              features: default,
+            },
+            {
+              target: "aarch64-apple-darwin",
+              exe: "aarch64-macos",
               os: "macos-latest",
               features: default,
             },
@@ -242,7 +248,8 @@
             files: "\
               ./arty/patch-json-wasi.wasm\n\
               ./arty/patch-json-windows.exe\n\
-              ./arty/patch-json-macos\n\
+              ./arty/patch-json-aarch64-macos\n\
+              ./arty/patch-json-amd64-macos\n\
               ./arty/patch-json-aarch64-linux\n\
               ./arty/patch-json-armv7-linux\n\
               ./arty/patch-json-amd64-linux\n\
